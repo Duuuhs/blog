@@ -96,6 +96,11 @@
 其实上述两中方法分别是在运算和存储上的权衡。
 1. **distinct需要将col列中的全部内容都存储在一个内存中，可以理解为一个hash结构，key为col的值，最后计算hash结构中有多少个key即可得到结果。**
 很明显，需要将所有不同的值都存起来。内存消耗可能较大。
-2. **group by的方式是先将col排序。而数据库中的group一般使用sort的方法，即数据库会先对col进行排序**。而排序的基本理论是，时间复杂为nlogn，空间为1.，然后只要单纯的计数就可以了。优点是空间复杂度小，缺点是要进行一次排序，执行时间会较长。
-3. 很多情景下，尤其对于文本类型的字段，直接使用count distinct的查询效率是非常低的，而先做group by比count往往能提升查询效率。但实验表明，对于不同的字段，count distinct与count group by的性能并不一样，而且其效率也与目标数据集的数据重复度相关。而当group by结果集较大时，无法通过在内存中维护Hash表的方式使用HashAggregation，会使用GroupAggregation，并会用到排序，而且因为目标数据集太大，无法在内存中使用Quick Sort，而要在外存中使用Merge Sort，而这就极大的增加了I/O开销。
-4. 因此，如果必须要计算精确的distinct count，可以针对不同的情况使用count distinct或者count group by来实现较好的效率，同时对于数据的存储类型，能使用macaddr/intger/bigint的，尽量不要使用text。
+2. **group by的方式是先将col排序。而数据库中的group一般使用sort的方法，即数据库会先对col进行排序**。而排序的基本理论是，时间复杂为nlogn，空间为1，  
+然后只要单纯的计数就可以了。优点是空间复杂度小，缺点是要进行一次排序，执行时间会较长。
+3. 很多情景下，尤其对于文本类型的字段，直接使用count distinct的查询效率是非常低的，而先做group by比count往往能提升查询效率。但实验表明，对于不同的  
+字段，count distinct与count group by的性能并不一样，而且其效率也与目标数据集的数据重复度相关。而当结果集较大时，无法通过在内存中维护Hash表的方式使  
+用HashAggregation，会使用GroupAggregation，并会用到排序，而且因为目标数据集太大，无法在内存中使用Quick Sort，而要在外存中使用Merge Sort,而这就极  
+大的增加了I/O开销。
+4. 因此，如果必须要计算精确的distinct count，可以针对不同的情况使用count distinct或者count group by来实现较好的效率,同时对于数据的存储类型,能使用  
+macaddr/intger/bigint的，尽量不要使用text。
