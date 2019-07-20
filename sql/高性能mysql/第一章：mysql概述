@@ -2,7 +2,7 @@
 
 Mysql服务器逻辑架构图如下所示：
 
-![图片加载失败](https://github.com/Duuuhs/blog/blob/master/res/png/%E9%AB%98%E6%80%A7%E8%83%BDmysql_1-1.png)
+![图片加载失败](https://github.com/Duuuhs/blog/blob/master/res/png/EffectiveMysql_1-1.png)
   
   
 1. 排他锁(X锁),也叫写锁
