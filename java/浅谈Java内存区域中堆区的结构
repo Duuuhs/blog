@@ -1,0 +1,31 @@
+> 部分内容来自《深入理解Java虚拟机第二版》。
+
+引言：Java内存区域是JVM中重要的组成部分，对于我们理解Java虚拟机底层具有极大的帮助。
+
+1.  Java内存区域一般分为五块，分别是：**方法区（Method Area），堆区（Java Heap），虚拟机栈（Java Virtual Machine Stack），本地方法栈（Native Method Stack），程序计数器（Program Counter Register）**。
+2.  Java堆区（Java Heap）  是java虚拟机所管理的**内存中最大**的一块。Java堆区是被所有线程共享的一块内存区域。一般存放的是各种**对象实例**以及**数组**。
+**2.1**     Java堆区是垃圾收集器管理的主要区域，因此很多时候也被称为“GC堆”，由于现在收集器基本都采用分带收集算法，所以Java堆中还可以细分为：**新生代**与**老年代**。Java堆区可以处于物理上不连续的内存空间中，主要逻辑上是连续的即可。
+**2.2**.  新生代与老年代。JVM中新生代一般存放存活时间较短的，大小较小的对象，而年老代里存放的都是存活时间较久的，大小较大的对象。JVM默认新生代占堆区大小的1/3，而老年代默认占堆区大小的2/3。
+**2.3**.  新生代又分 Eden 区和 Survivor 区，其中 Survivor 区又分 From 和 To 2个区。新生代中Eden ：From ：To默认比例为8：1：1。
+3. Eden 区和 Survivor 区
+3.1 Eden 区
+    IBM 公司的专业研究表明，有将近98%的对象是朝生夕死，所以针对这一现状，大多数情况下，对象会在新生代 Eden 区中进行分配，当 Eden 区没有足够空间进行分配时，虚拟机会发起一次 Minor GC，Minor GC 相比 Major GC 更频繁，回收速度也更快。
+通过 Minor GC 之后，Eden 会被清空，Eden 区中绝大部分对象会被回收，而那些无需回收的存活对象，将会进到 Survivor 的 From 区（若 From 区不够，则直接进入 Old 区）。From 区与To区这两个区是相对的，在发生一次Minor GC后，from区就会和to区互换。在发生Minor GC时，Eden区和Survival from区会把一些仍然存活的对象复制进Survival to区，并清除内存。
+3.2 Survivor 区
+    Survivor 区相当于是 Eden 区和 Old 区的一个缓冲。Survivor 又分为2个区，一个是 From 区，一个是 To 区。每次执行 Minor GC，会将 Eden 区和 From 存活的对象放到 Survivor 的 To 区（如果 To 区不够，则直接进入 Old 区）。
+3.2.1 为什么需要Survivor区？
+    Survivor 的存在意义就是减少被送到老年代的对象，进而减少 Major GC 的发生。Survivor 的预筛选保证，JVM规定理论上只有经历15次 Minor GC 还能在新生代中存活的对象，才会被送到老年代。当然会有一些特例存在，后边会分析。
+ 3.2.2 为什么Survivor区分为两块大小相同的From区和To区？
+     设置两个 Survivor 区最大的好处就是**解决内存碎片化**。因为 Survivor 有2个区域，所以每次 Minor GC，会将之前 Eden 区和 From 区中的存活对象复制到 To 区域。第二次 Minor GC 时，From 与 To 职责兑换，这时候会将 Eden 区和 To 区中的存活对象再复制到 From 区域，以此反复。这种机制最大的好处就是，整个过程中，永远有一个 Survivor space 是空的，另一个非空的 Survivor space 是无碎片的。那么，Survivor 为什么不分更多块呢？比方说分成三个、四个、五个?显然，如果 Survivor 区再细分下去，每一块的空间就会比较小，容易导致 Survivor 区满，两块 Survivor 区可能是经过权衡之后的最佳方案。JVM每次只会使用eden和其中一块survivor来为对象服务，所以无论什么时候，都会有一块survivor空间，**因此新生代实际可用空间只有90%**。
+4. 内存分配机制：
+4.1  对象优先在Eden区分配。大多数情况下，对象在新生代Eden去分配。当Eden区没有足够空间进行分配时，虚拟机会发起一次Minor GC。
+4.2  大对象直接进入老年代。所谓的大对象是指，需要大量连续内存空间的Java对象，最典型的大对象就是那种很长的字符串以及数组。
+4.3  长期存活的对象将进入老年代。当某个对象在Eden出生并经过第一次Minor GC后仍存活，此时该对象一般将会被安置在Survivor区，并且对象年龄设为1。当该对象年龄增加到一定程度，默认为15岁，就将晋升到老年代中。
+4.4  动态年龄判定。  
+    如果在Survivor空间中相同年龄所有对象大小的总和大于Survivor空间的一半，年龄大于或等于该年龄的对象就可以直接进入老年代，无须等到MaxTenuringThreshold中要求的年龄。
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20190801232248431.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L0R1dXVocw==,size_16,color_FFFFFF,t_70)
+**总结**
+1.  **内存区域一般为方法区（Method Area），堆区（Java Heap），虚拟机栈（Java Virtual Machine Stack），本地方法栈（Native Method Stack），程序计数器（Program Counter Register）**；
+2.   **堆区中新生代与老年代默认占堆区大小分别为：1/3和2/3。新生代中Survivor：From：To默认比例为8：1：1**；
+3.   **From区与To区是相对的，只有一块区域会被使用到，因此新生代中每次使用的空间不超过90%，主要用来存放新生的对象**；
+4.   **新生代GC为Minor GC，老年代GC为Full GC/Major GC。并且新生代采用复制算法，老年代采用标记-清除算法**。
